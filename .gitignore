@@ -1,5 +1,7 @@
 __pycache__/
 .venv/
 train_folds.csv
+project_overview.md
+member1_feature_feedback.md
 *.pyc
 .ipynb_checkpoints/
