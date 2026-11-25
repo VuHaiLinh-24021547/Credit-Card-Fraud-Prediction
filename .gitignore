@@ -4,3 +4,5 @@ train_folds.csv
 project_overview.md
 *.pyc
 .ipynb_checkpoints/
+.vscode
+*.joblib
