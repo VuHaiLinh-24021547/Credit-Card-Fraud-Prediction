@@ -1,0 +1,46 @@
+{
+  "winner_label": "Top-1 (Trial #29)",
+  "best_trial_number": 29,
+  "n_trials": 35,
+  "n_complete": 21,
+  "n_pruned": 14,
+  "oof_auprc": 0.5136292976925638,
+  "mean_fold_auprc": 0.5139285513339057,
+  "std_fold_auprc": 0.012734696948376352,
+  "oof_roc_auc": 0.947215129911929,
+  "best_f1": 0.5028491277285877,
+  "best_threshold": 0.48553585048506376,
+  "fold_auprcs": [
+    0.4979260303786347,
+    0.5205180871095872,
+    0.5323733169478881,
+    0.5174861970740753,
+    0.5013391251593432
+  ],
+  "best_iterations": [
+    1249,
+    1924,
+    1856,
+    1527,
+    2098
+  ],
+  "params": {
+    "objective": "binary",
+    "metric": "average_precision",
+    "boosting_type": "gbdt",
+    "learning_rate": 0.028804556398208715,
+    "n_estimators": 4000,
+    "num_leaves": 11,
+    "max_depth": 4,
+    "colsample_bytree": 0.4615970860753574,
+    "subsample": 0.9581351083206087,
+    "subsample_freq": 1,
+    "min_child_samples": 172,
+    "reg_alpha": 0.3089016400296857,
+    "reg_lambda": 18.30744086412154,
+    "scale_pos_weight": 3.359272372588889,
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": -1
+  }
+}
