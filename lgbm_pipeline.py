@@ -1,7 +1,9 @@
-"""Shared leak-free LightGBM cross-validation and evaluation pipeline for Member 2."""
+"""Shared leak-free LightGBM cross-validation, tuning, and prediction export pipeline for Member 2."""
 
+import json
 import os
 import time
+import warnings
 from typing import Any, Iterable
 
 import lightgbm as lgb
@@ -24,6 +26,8 @@ from nn_data_pipeline import (
     evaluate_auprc,
 )
 
+warnings.filterwarnings("ignore", message=".*eval_set.*")
+
 FOLD_COL = "fold"
 TRAIN_LGBM_PATH = os.path.join("processed_data", "train_lgbm.parquet")
 TEST_LGBM_PATH = os.path.join("processed_data", "test_lgbm.parquet")
@@ -43,18 +47,15 @@ def load_lgbm_datasets(
     feature_cols = [c for c in train_df.columns if c not in excluded]
     cat_cols = [c for c in CAT_COLS if c in feature_cols]
 
-    # Verify identical feature schema between train and test
     test_feature_cols = [c for c in test_df.columns if c != ID_COL]
     if feature_cols != test_feature_cols:
         raise ValueError("Train and test feature columns do not match in name or order.")
 
-    # Verify zero Inf values in numeric columns
     num_tr = train_df[feature_cols].select_dtypes(include=[np.number]).to_numpy(dtype=np.float64)
     num_te = test_df[feature_cols].select_dtypes(include=[np.number]).to_numpy(dtype=np.float64)
     if np.isinf(num_tr).any() or np.isinf(num_te).any():
         raise ValueError("Infinite values detected in LightGBM numeric features.")
 
-    # Verify exact row alignment with shared train_folds.csv if present
     if verify_folds_path and os.path.exists(verify_folds_path):
         tf = pd.read_csv(verify_folds_path, usecols=[ID_COL, FOLD_COL, TARGET_COL])
         if not np.array_equal(train_df[ID_COL].to_numpy(), tf[ID_COL].to_numpy()):
@@ -67,7 +68,6 @@ def load_lgbm_datasets(
         ):
             raise ValueError("Target misalignment between train_lgbm.parquet and train_folds.csv.")
 
-    # Verify exact row alignment with raw test.csv if present
     if verify_test_raw_path and os.path.exists(verify_test_raw_path):
         te_raw = pd.read_csv(verify_test_raw_path, usecols=[ID_COL])
         if not np.array_equal(test_df[ID_COL].to_numpy(), te_raw[ID_COL].to_numpy()):
@@ -174,6 +174,52 @@ def get_default_lgbm_params(seed: int = SEED) -> dict[str, Any]:
     }
 
 
+def load_best_lgbm_params(path: str = "best_lgbm_params.json") -> dict[str, Any]:
+    """Load Optuna-tuned LightGBM hyperparameter dictionary exported by Task 3."""
+    with open(path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    return dict(payload["params"])
+
+
+def verify_exported_predictions(
+    oof_path: str,
+    test_path: str,
+    train_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    expected_auprc: float | None = None,
+) -> dict[str, Any]:
+    """Reload exported .npy files from disk and enforce strict shape, range, and metric checks."""
+    oof_arr = np.load(oof_path)
+    test_arr = np.load(test_path)
+
+    if oof_arr.ndim != 1 or len(oof_arr) != len(train_df):
+        raise ValueError(f"Invalid oof shape {oof_arr.shape}; expected ({len(train_df)},).")
+    if test_arr.ndim != 1 or len(test_arr) != len(test_df):
+        raise ValueError(f"Invalid test shape {test_arr.shape}; expected ({len(test_df)},).")
+
+    for name, arr in [("oof_lgbm", oof_arr), ("test_lgbm", test_arr)]:
+        if np.isnan(arr).any() or np.isinf(arr).any():
+            raise ValueError(f"{name} contains NaN or Inf values.")
+        if float(arr.min()) < 0.0 or float(arr.max()) > 1.0:
+            raise ValueError(f"{name} values out of [0, 1]: min={arr.min()}, max={arr.max()}.")
+
+    reloaded_auprc = evaluate_auprc(train_df[TARGET_COL].to_numpy(), oof_arr)
+    if expected_auprc is not None and abs(reloaded_auprc - expected_auprc) > 1e-10:
+        raise ValueError(f"Reloaded AUPRC {reloaded_auprc} != expected {expected_auprc}.")
+
+    return {
+        "oof_shape": oof_arr.shape,
+        "test_shape": test_arr.shape,
+        "oof_dtype": str(oof_arr.dtype),
+        "test_dtype": str(test_arr.dtype),
+        "reloaded_oof_auprc": reloaded_auprc,
+        "oof_mean": float(oof_arr.mean()),
+        "test_mean": float(test_arr.mean()),
+        "oof_p99": float(np.percentile(oof_arr, 99)),
+        "test_p99": float(np.percentile(test_arr, 99)),
+    }
+
+
 def run_lgbm_cv(
     train_df: pd.DataFrame,
     feature_cols: list[str],
@@ -225,7 +271,6 @@ def run_lgbm_cv(
             fold_params["bagging_seed"] = int(seed)
             fold_params["feature_fraction_seed"] = int(seed)
 
-            # Compute fold-local scale_pos_weight strictly on training fold
             if spw_mode is not None:
                 fold_params.pop("is_unbalance", None)
                 fold_params["scale_pos_weight"] = compute_scale_pos_weight(y_tr, mode=spw_mode)
