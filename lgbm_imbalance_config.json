@@ -1,0 +1,11 @@
+{
+  "exp_id": "EXP-2.5d",
+  "strategy": "Moderate Weight (spw=5.0)",
+  "spw_mode": 5.0,
+  "is_unbalance": false,
+  "effective_spw": 5.0,
+  "oof_auprc": 0.4997888362230191,
+  "mean_fold_auprc": 0.5002304368736028,
+  "std_fold_auprc": 0.01009722961322005,
+  "delta_vs_unweighted": 0.0017741725337291903
+}
