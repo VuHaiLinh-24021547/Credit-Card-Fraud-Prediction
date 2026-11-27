@@ -1,0 +1,77 @@
+{
+  "exp_id": "EXP-NN-1A",
+  "strategy": "BCEWithLogits (pos_weight=1.0, Unweighted)",
+  "loss_type": "bce",
+  "pos_weight_mode": 1.0,
+  "alpha": null,
+  "gamma": null,
+  "clip_val": 20.0,
+  "hidden_dims": [
+    256,
+    128,
+    64,
+    32
+  ],
+  "dropouts": [
+    0.3,
+    0.25,
+    0.2,
+    0.1
+  ],
+  "oof_auprc": 0.4903648381749573,
+  "mean_fold_auprc": 0.4937568896355529,
+  "std_fold_auprc": 0.009755176706937633,
+  "oof_roc_auc": 0.9417229405265434,
+  "f1_at_0.50": 0.36520469776391745,
+  "best_f1": 0.48474157699770687,
+  "best_threshold": 0.17305783927440643,
+  "delta_vs_unweighted": 0.0,
+  "fold_auprcs": [
+    0.48335613806915945,
+    0.4995494438323374,
+    0.509226636295615,
+    0.49255626613587644,
+    0.4840959638447763
+  ],
+  "stage2_comparison": [
+    {
+      "Exp_ID": "EXP-NN-1A",
+      "Strategy": "BCEWithLogits (pos_weight=1.0, Unweighted)",
+      "OOF_AUPRC": 0.4903648381749573,
+      "Mean_Fold_AUPRC": 0.4937568896355529,
+      "Std_Fold_AUPRC": 0.009755176706937633,
+      "Delta_vs_Unweighted": 0.0,
+      "OOF_ROC_AUC": 0.9417229405265434,
+      "F1_at_0.50": 0.36520469776391745,
+      "Best_F1": 0.48474157699770687,
+      "Best_Threshold": 0.17305783927440643,
+      "Train_Time_Sec": 148.4
+    },
+    {
+      "Exp_ID": "EXP-NN-2C",
+      "Strategy": "Focal Loss (gamma=2.0, alpha=0.25)",
+      "OOF_AUPRC": 0.4894012735570227,
+      "Mean_Fold_AUPRC": 0.493293031865692,
+      "Std_Fold_AUPRC": 0.009576798564736465,
+      "Delta_vs_Unweighted": -0.0009635646179346202,
+      "OOF_ROC_AUC": 0.9418941817073865,
+      "F1_at_0.50": 0.13115537848605577,
+      "Best_F1": 0.48606334841628956,
+      "Best_Threshold": 0.25198760628700256,
+      "Train_Time_Sec": 196.5
+    },
+    {
+      "Exp_ID": "EXP-NN-1B",
+      "Strategy": "BCEWithLogits (pos_weight=3.0, Mild)",
+      "OOF_AUPRC": 0.48830195890149863,
+      "Mean_Fold_AUPRC": 0.49277632688556794,
+      "Std_Fold_AUPRC": 0.010042847428442667,
+      "Delta_vs_Unweighted": -0.002062879273458662,
+      "OOF_ROC_AUC": 0.9409021095054806,
+      "F1_at_0.50": 0.482541222114452,
+      "Best_F1": 0.48612682750192365,
+      "Best_Threshold": 0.4516763389110565,
+      "Train_Time_Sec": 194.8
+    }
+  ]
+}
