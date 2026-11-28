@@ -1,4 +1,4 @@
-"""Leak-free fold-wise Neural Network data pipeline built directly from train_folds.csv."""
+"""Leak-free fold-wise Neural Network & shared data pipeline built from train_folds.csv."""
 
 import os
 from typing import Iterator
@@ -8,6 +8,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import OneHotEncoder, RobustScaler
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 SEED = 42
 N_SPLITS = 5
@@ -87,6 +89,14 @@ NN_BIN_COLS = RISK_FLAG_COLS + [
 ]
 
 
+def _resolve_root_path(path: str) -> str:
+    """Resolve relative paths against cwd first, then PROJECT_ROOT."""
+    if os.path.isabs(path) or os.path.exists(path):
+        return path
+    candidate = os.path.join(PROJECT_ROOT, path)
+    return candidate if os.path.exists(candidate) else path
+
+
 def evaluate_auprc(y_true, y_pred_proba) -> float:
     """Shared primary evaluation metric (Area Under the Precision-Recall Curve)."""
     y_true_arr = np.asarray(y_true, dtype=np.int64)
@@ -101,18 +111,21 @@ def ensure_train_folds(
     raw_train_path: str = "train.csv",
 ) -> pd.DataFrame:
     """Load train_folds.csv, or create it deterministically from train.csv if missing."""
-    if os.path.exists(train_folds_path):
-        df = pd.read_csv(train_folds_path)
+    tf_path = _resolve_root_path(train_folds_path)
+    if os.path.exists(tf_path):
+        df = pd.read_csv(tf_path)
         df[TARGET_COL] = df[TARGET_COL].astype(int)
         return df
 
-    train_raw = pd.read_csv(raw_train_path)
+    raw_path = _resolve_root_path(raw_train_path)
+    train_raw = pd.read_csv(raw_path)
     train_raw[TARGET_COL] = train_raw[TARGET_COL].astype(int)
     skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=SEED)
     train_raw["fold"] = -1
     for fold_idx, (_, val_idx) in enumerate(skf.split(train_raw, train_raw[TARGET_COL])):
         train_raw.iloc[val_idx, train_raw.columns.get_loc("fold")] = fold_idx
-    train_raw.to_csv(train_folds_path, index=False)
+    out_path = os.path.join(PROJECT_ROOT, train_folds_path) if not os.path.isabs(train_folds_path) else train_folds_path
+    train_raw.to_csv(out_path, index=False)
     return train_raw
 
 
@@ -184,30 +197,25 @@ def _transform_single_fold(
     tr_mask = (train_fe["fold"] != fold).to_numpy()
     va_mask = (train_fe["fold"] == fold).to_numpy()
 
-    # 1. Numeric Imputation (fit strictly on fold != k)
     num_imputer = SimpleImputer(strategy="median")
     X_tr_num = num_imputer.fit_transform(train_fe.loc[tr_mask, NN_NUM_COLS].to_numpy(dtype=np.float64))
     X_va_num = num_imputer.transform(train_fe.loc[va_mask, NN_NUM_COLS].to_numpy(dtype=np.float64))
     X_te_num = num_imputer.transform(test_fe[NN_NUM_COLS].to_numpy(dtype=np.float64))
 
-    # 2. Skewness Reduction via log1p(clip(x, 0, None))
     X_tr_num[:, skew_col_indices] = np.log1p(np.clip(X_tr_num[:, skew_col_indices], 0.0, None))
     X_va_num[:, skew_col_indices] = np.log1p(np.clip(X_va_num[:, skew_col_indices], 0.0, None))
     X_te_num[:, skew_col_indices] = np.log1p(np.clip(X_te_num[:, skew_col_indices], 0.0, None))
 
-    # 3. Robust Scaling across all numeric features (fit strictly on fold != k)
     scaler = RobustScaler()
     X_tr_num = scaler.fit_transform(X_tr_num)
     X_va_num = scaler.transform(X_va_num)
     X_te_num = scaler.transform(X_te_num)
 
-    # 4. Binary 0/1 Features (kept unscaled as 0/1)
     bin_imputer = SimpleImputer(strategy="most_frequent")
     X_tr_bin = bin_imputer.fit_transform(train_fe.loc[tr_mask, NN_BIN_COLS].to_numpy(dtype=np.float64))
     X_va_bin = bin_imputer.transform(train_fe.loc[va_mask, NN_BIN_COLS].to_numpy(dtype=np.float64))
     X_te_bin = bin_imputer.transform(test_fe[NN_BIN_COLS].to_numpy(dtype=np.float64))
 
-    # 5. Categorical Imputation + One-Hot Encoding (fit strictly on fold != k)
     cat_imputer = SimpleImputer(strategy="most_frequent")
     X_tr_cat_imp = cat_imputer.fit_transform(_prep_cat_matrix(train_fe.loc[tr_mask], CAT_COLS))
     X_va_cat_imp = cat_imputer.transform(_prep_cat_matrix(train_fe.loc[va_mask], CAT_COLS))
@@ -240,7 +248,7 @@ def get_nn_fold_data(
     if fold not in range(N_SPLITS):
         raise ValueError(f"fold must be in 0..{N_SPLITS - 1}, got {fold}")
     train_fe = _normalize_day_of_week(build_features(ensure_train_folds(train_folds_path)))
-    test_fe = _normalize_day_of_week(build_features(pd.read_csv(test_path)))
+    test_fe = _normalize_day_of_week(build_features(pd.read_csv(_resolve_root_path(test_path))))
     return _transform_single_fold(train_fe, test_fe, fold)
 
 
@@ -250,6 +258,6 @@ def iter_nn_folds(
 ) -> Iterator[tuple[int, dict]]:
     """Yield (fold_k, fold_dict) for folds 0..4 while reading CSVs only once."""
     train_fe = _normalize_day_of_week(build_features(ensure_train_folds(train_folds_path)))
-    test_fe = _normalize_day_of_week(build_features(pd.read_csv(test_path)))
+    test_fe = _normalize_day_of_week(build_features(pd.read_csv(_resolve_root_path(test_path))))
     for k in range(N_SPLITS):
         yield k, _transform_single_fold(train_fe, test_fe, k)

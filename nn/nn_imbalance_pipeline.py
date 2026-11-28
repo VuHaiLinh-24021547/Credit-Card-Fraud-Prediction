@@ -2,7 +2,9 @@
 
 import copy
 import math
+import os
 import random
+import sys
 from typing import Any
 
 import numpy as np
@@ -18,7 +20,12 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from nn_data_pipeline import evaluate_auprc
+NN_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(NN_DIR, ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from data_pipeline.nn_data_pipeline import evaluate_auprc
 
 
 def set_seed(seed: int = 42) -> None:
@@ -105,8 +112,7 @@ def make_loss(
 
     if loss_type == "bce":
         if pos_weight is None or pos_weight == 1.0:
-            eff_pw = 1.0
-            return nn.BCEWithLogitsLoss(), prior, eff_pw
+            return nn.BCEWithLogitsLoss(), prior, 1.0
         if pos_weight == "sqrt":
             eff_pw = math.sqrt(ir)
         elif pos_weight == "balanced":

@@ -1,7 +1,8 @@
-"""Shared leak-free LightGBM cross-validation, tuning, and prediction export pipeline for Member 2."""
+"""Shared leak-free LightGBM cross-validation, tuning, and prediction export pipeline."""
 
 import json
 import os
+import sys
 import time
 import warnings
 from typing import Any, Iterable
@@ -16,7 +17,12 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from nn_data_pipeline import (
+LGBM_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(LGBM_DIR, ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from data_pipeline.nn_data_pipeline import (
     CAT_COLS,
     ENGINEERED_COLS,
     ID_COL,
@@ -29,8 +35,19 @@ from nn_data_pipeline import (
 warnings.filterwarnings("ignore", message=".*eval_set.*")
 
 FOLD_COL = "fold"
-TRAIN_LGBM_PATH = os.path.join("processed_data", "train_lgbm.parquet")
-TEST_LGBM_PATH = os.path.join("processed_data", "test_lgbm.parquet")
+TRAIN_LGBM_PATH = os.path.join(PROJECT_ROOT, "processed_data", "train_lgbm.parquet")
+TEST_LGBM_PATH = os.path.join(PROJECT_ROOT, "processed_data", "test_lgbm.parquet")
+
+
+def _resolve_path(path: str, prefer_local: bool = False) -> str:
+    if os.path.isabs(path) or os.path.exists(path):
+        return path
+    search_order = (LGBM_DIR, PROJECT_ROOT) if prefer_local else (PROJECT_ROOT, LGBM_DIR)
+    for base in search_order:
+        cand = os.path.join(base, path)
+        if os.path.exists(cand):
+            return cand
+    return path
 
 
 def load_lgbm_datasets(
@@ -39,9 +56,9 @@ def load_lgbm_datasets(
     verify_folds_path: str | None = "train_folds.csv",
     verify_test_raw_path: str | None = "test.csv",
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[str], list[str]]:
-    """Load Member 1's LightGBM parquet artifacts and run strict integrity checks."""
-    train_df = pd.read_parquet(train_path)
-    test_df = pd.read_parquet(test_path)
+    """Load LightGBM parquet artifacts and run strict integrity checks."""
+    train_df = pd.read_parquet(_resolve_path(train_path))
+    test_df = pd.read_parquet(_resolve_path(test_path))
 
     excluded = {ID_COL, FOLD_COL, TARGET_COL}
     feature_cols = [c for c in train_df.columns if c not in excluded]
@@ -56,8 +73,9 @@ def load_lgbm_datasets(
     if np.isinf(num_tr).any() or np.isinf(num_te).any():
         raise ValueError("Infinite values detected in LightGBM numeric features.")
 
-    if verify_folds_path and os.path.exists(verify_folds_path):
-        tf = pd.read_csv(verify_folds_path, usecols=[ID_COL, FOLD_COL, TARGET_COL])
+    vf_path = _resolve_path(verify_folds_path) if verify_folds_path else None
+    if vf_path and os.path.exists(vf_path):
+        tf = pd.read_csv(vf_path, usecols=[ID_COL, FOLD_COL, TARGET_COL])
         if not np.array_equal(train_df[ID_COL].to_numpy(), tf[ID_COL].to_numpy()):
             raise ValueError("ID misalignment between train_lgbm.parquet and train_folds.csv.")
         if not np.array_equal(train_df[FOLD_COL].to_numpy(), tf[FOLD_COL].to_numpy()):
@@ -68,8 +86,9 @@ def load_lgbm_datasets(
         ):
             raise ValueError("Target misalignment between train_lgbm.parquet and train_folds.csv.")
 
-    if verify_test_raw_path and os.path.exists(verify_test_raw_path):
-        te_raw = pd.read_csv(verify_test_raw_path, usecols=[ID_COL])
+    vt_path = _resolve_path(verify_test_raw_path) if verify_test_raw_path else None
+    if vt_path and os.path.exists(vt_path):
+        te_raw = pd.read_csv(vt_path, usecols=[ID_COL])
         if not np.array_equal(test_df[ID_COL].to_numpy(), te_raw[ID_COL].to_numpy()):
             raise ValueError("ID misalignment between test_lgbm.parquet and test.csv.")
 
@@ -175,8 +194,8 @@ def get_default_lgbm_params(seed: int = SEED) -> dict[str, Any]:
 
 
 def load_best_lgbm_params(path: str = "best_lgbm_params.json") -> dict[str, Any]:
-    """Load Optuna-tuned LightGBM hyperparameter dictionary exported by Task 3."""
-    with open(path, "r", encoding="utf-8") as f:
+    """Load Optuna-tuned LightGBM hyperparameter dictionary."""
+    with open(_resolve_path(path, prefer_local=True), "r", encoding="utf-8") as f:
         payload = json.load(f)
     return dict(payload["params"])
 
@@ -189,8 +208,8 @@ def verify_exported_predictions(
     expected_auprc: float | None = None,
 ) -> dict[str, Any]:
     """Reload exported .npy files from disk and enforce strict shape, range, and metric checks."""
-    oof_arr = np.load(oof_path)
-    test_arr = np.load(test_path)
+    oof_arr = np.load(_resolve_path(oof_path, prefer_local=True))
+    test_arr = np.load(_resolve_path(test_path, prefer_local=True))
 
     if oof_arr.ndim != 1 or len(oof_arr) != len(train_df):
         raise ValueError(f"Invalid oof shape {oof_arr.shape}; expected ({len(train_df)},).")
