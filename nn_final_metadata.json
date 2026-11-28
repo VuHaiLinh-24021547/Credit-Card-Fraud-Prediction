@@ -1,0 +1,83 @@
+{
+  "model": "3-Seed Bagged MLP-4L-Wide ([42, 2024, 2026])",
+  "arch_id": "MLP-4L-Wide",
+  "architecture": {
+    "hidden_dims": [
+      512,
+      256,
+      128,
+      64
+    ],
+    "dropouts": [
+      0.35,
+      0.3,
+      0.2,
+      0.1
+    ],
+    "lr": 0.0015,
+    "weight_decay": 0.0001,
+    "scheduler_type": "plateau",
+    "batch_size": 4096,
+    "clip_val": 20.0
+  },
+  "imbalance_config": {
+    "exp_id": "EXP-NN-1A",
+    "loss_type": "bce",
+    "pos_weight_mode": 1.0,
+    "alpha": null,
+    "gamma": null
+  },
+  "seeds": [
+    42,
+    2024,
+    2026
+  ],
+  "oof_path": "oof_nn.npy",
+  "test_path": "test_nn.npy",
+  "oof_shape": [
+    699960
+  ],
+  "test_shape": [
+    299984
+  ],
+  "oof_auprc": 0.4938326916464967,
+  "mean_fold_auprc": 0.49449253008151733,
+  "std_fold_auprc": 0.009157380883928277,
+  "oof_roc_auc": 0.9420348018957614,
+  "f1_at_050": 0.3853484602917342,
+  "best_f1": 0.48757407761422283,
+  "best_threshold": 0.22123445073763529,
+  "fold_auprcs": [
+    0.4859072808594411,
+    0.49867723814729625,
+    0.5096539479165451,
+    0.4936011346941634,
+    0.484623048790141
+  ],
+  "best_epochs_per_seed": {
+    "42": [
+      12,
+      12,
+      8,
+      12,
+      8
+    ],
+    "2024": [
+      16,
+      11,
+      9,
+      14,
+      14
+    ],
+    "2026": [
+      8,
+      10,
+      10,
+      12,
+      15
+    ]
+  },
+  "pearson_vs_lgbm": 0.9061254461037997,
+  "spearman_vs_lgbm": 0.9319156763835392,
+  "train_time_sec": 281.3
+}
