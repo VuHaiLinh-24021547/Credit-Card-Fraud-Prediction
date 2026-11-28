@@ -1,0 +1,26 @@
+{
+  "evaluation_metric": "AUPRC",
+  "all_10_checks_passed": true,
+  "checks": {
+    "1_exact_columns_id_is_fraud": true,
+    "2_exact_row_count_299984": true,
+    "3_exact_id_match_sample_sub": true,
+    "4_no_nan_or_null": true,
+    "5_no_infinite_values": true,
+    "6_strictly_within_0_1": true,
+    "7_non_constant_predictions": true,
+    "8_high_corr_with_lgbm_and_nn": true,
+    "9_oof_test_mean_alignment_within_5pct_rel": true,
+    "10_calibrated_mean_near_base_fraud_rate": true
+  },
+  "winning_ensemble_method": "logit",
+  "weight_lgbm": 0.9076318117849806,
+  "weight_nn": 0.09236818821501935,
+  "final_oof_auprc": 0.5147239863881833,
+  "final_nested_oof_auprc": 0.5146531167656985,
+  "final_mean_fold_auprc": 0.5150459611176768,
+  "final_std_fold_auprc": 0.012296227169169395,
+  "submission_rows": 299984,
+  "submission_mean_prob": 0.015884819512523258,
+  "oof_mean_prob": 0.01593789420428747
+}
