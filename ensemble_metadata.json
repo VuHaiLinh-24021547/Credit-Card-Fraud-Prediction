@@ -1,0 +1,39 @@
+{
+  "winning_method": "logit",
+  "weight_lgbm": 0.9076318117849806,
+  "weight_nn": 0.09236818821501935,
+  "lgbm_spw_used_for_calibration": 3.359272372588889,
+  "single_lgbm_oof_auprc": 0.5145607477360743,
+  "single_nn_oof_auprc": 0.4938326916464967,
+  "reference_070_030_raw_auprc": 0.5136175472699748,
+  "reference_070_030_prior_cal_auprc": 0.5136283641338782,
+  "nested_oof_auprc": 0.5146531167656985,
+  "global_oof_auprc": 0.5147239863881833,
+  "mean_fold_auprc": 0.5150459611176768,
+  "std_fold_auprc": 0.012296227169169395,
+  "gain_vs_lgbm": 0.00016323865210898791,
+  "gain_vs_nn": 0.020891294741686606,
+  "fold_weights": [
+    0.935442496380729,
+    0.9024659113695374,
+    0.9026577864998763,
+    0.89,
+    0.9278784528623891
+  ],
+  "fold_auprcs": [
+    0.5001509468674608,
+    0.5215140182725884,
+    0.5329866657495201,
+    0.5181999729295496,
+    0.5023782017692648
+  ],
+  "diversity": {
+    "pearson_all": 0.9061254461038,
+    "spearman_all": 0.9319156763835434,
+    "pearson_fraud_only": 0.9077243826315976,
+    "spearman_fraud_only": 0.977050400040505,
+    "top_2pct_jaccard_overlap": 0.7420358387257342
+  },
+  "oof_blend_mean": 0.01593789420428747,
+  "test_blend_mean": 0.015884819512523258
+}
